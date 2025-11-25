@@ -12,6 +12,14 @@ cd lag-pac
 ## Usage
 
 - `pac -U` - System update (14-day schedule)
-- `pac -C` - Update Firefox/Steam/gaming
+- `pac -C` - Update Firefox/Steam/gaming (detects pacman, Flatpak, Snap, AUR)
+
+## Updating
+
+```bash
+cd lag-pac
+git pull
+./install.sh
+```
 
 ##### Suh dude, enjoy. 

@@ -29,6 +29,63 @@ else
     DAYS_SINCE=999
 fi
 
+update_critical() {
+    echo "🎮 Detecting and updating critical packages..."
+    echo ""
+
+    # Update native pacman packages
+    echo "📦 Checking pacman packages..."
+    sudo /usr/bin/pacman -S --needed $CRITICAL_PKGS
+
+    # Update Flatpak if installed
+    if command -v flatpak &> /dev/null; then
+        echo ""
+        echo "📦 Checking Flatpak packages..."
+        FLATPAK_APPS=(
+            "org.mozilla.firefox"
+            "com.google.Chrome"
+            "org.chromium.Chromium"
+            "com.valvesoftware.Steam"
+            "org.winehq.Wine"
+        )
+
+        for app in "${FLATPAK_APPS[@]}"; do
+            if flatpak list --app | grep -q "$app"; then
+                echo "  Updating: $app"
+                flatpak update -y "$app" 2>/dev/null || true
+            fi
+        done
+    fi
+
+    # Update Snap if installed
+    if command -v snap &> /dev/null; then
+        echo ""
+        echo "📦 Checking Snap packages..."
+        SNAP_APPS=("firefox" "chromium" "steam")
+
+        for app in "${SNAP_APPS[@]}"; do
+            if snap list 2>/dev/null | grep -q "^$app "; then
+                echo "  Updating: $app"
+                sudo snap refresh "$app" 2>/dev/null || true
+            fi
+        done
+    fi
+
+    # Update via yay/paru if available (AUR)
+    if command -v yay &> /dev/null; then
+        echo ""
+        echo "📦 Checking AUR packages (yay)..."
+        yay -S --needed $CRITICAL_PKGS --noconfirm 2>/dev/null || true
+    elif command -v paru &> /dev/null; then
+        echo ""
+        echo "📦 Checking AUR packages (paru)..."
+        paru -S --needed $CRITICAL_PKGS --noconfirm 2>/dev/null || true
+    fi
+
+    echo ""
+    echo "✅ Critical package update complete!"
+}
+
 case "$1" in
     -U|--update)
         if [ $DAYS_SINCE -lt $UPDATE_INTERVAL ]; then
@@ -39,9 +96,9 @@ case "$1" in
             echo "2. Force full update"
             echo "3. Cancel"
             read -p "Choice: " choice
-            
+
             case $choice in
-                1) sudo /usr/bin/pacman -S --needed $CRITICAL_PKGS ;;
+                1) update_critical ;;
                 2) sudo /usr/bin/pacman -Syu && touch "$LAST_UPDATE" ;;
                 3) exit 0 ;;
             esac
@@ -51,8 +108,7 @@ case "$1" in
         fi
         ;;
     -C|--critical)
-        echo "🎮 Updating critical packages..."
-        sudo /usr/bin/pacman -S --needed $CRITICAL_PKGS
+        update_critical
         ;;
     *)
         echo "Stable Pac - Arch Update Manager"
@@ -64,6 +120,7 @@ case "$1" in
         echo "  -C, --critical   Update critical packages only"
         echo ""
         echo "Critical packages: Firefox, Chromium, Steam, Wine, Vulkan, Mesa"
+        echo "Supports: pacman, Flatpak, Snap, AUR (yay/paru)"
         ;;
 esac
 PACSCRIPT
